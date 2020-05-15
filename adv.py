@@ -10,8 +10,8 @@ world = World()
 
 
 # You may uncomment the smaller graphs for development and testing purposes.
-map_file = "maps/test_line.txt"
-# map_file = "maps/test_cross.txt"
+# map_file = "maps/test_line.txt"
+map_file = "maps/test_cross.txt"
 # map_file = "maps/test_loop.txt"
 # map_file = "maps/test_loop_fork.txt"
 # map_file = "maps/main_maze.txt"
@@ -27,6 +27,7 @@ player = Player(world.starting_room)
 
 # Our map for navigating the world
 nav_graph = {}
+nav_visited = set()
 
 
 def reverse_dir(dir):
@@ -50,6 +51,7 @@ def explore(player, from_room=None, from_dir=None):
 
     # Are we in a new room?
     if room_id not in nav_graph:
+        nav_visited.add(room_id)
         nav_graph[room_id] = {}
         print("New room #", room_id)
         for direction in exits:
@@ -61,32 +63,71 @@ def explore(player, from_room=None, from_dir=None):
         # Don't forget to update the previous room:
         nav_graph[from_room].update({reverse_dir(from_dir): room_id})
 
-    # print(nav_graph)
+    if len(nav_graph) == len(room_graph):
+        # All rooms successfully visited!
+        return
 
     print("Room id = ", player.current_room.id)
     print("Options = ", player.current_room.get_exits())
-    if 'n' in player.current_room.get_exits():
-        print("We can go North!")
-        # Now actually go North...
+
+    print("Our copy = ", nav_graph[room_id])
+
+    # TODO: Loop Optimization
+
+    # Start by going North, if possible
+    # if 'n' in player.current_room.get_exits():
+    print("In room ", room_id, ". Trying North.")
+    if nav_graph[room_id].get('n') == '?':
         player.travel('n')
         traversal_path.append('n')
         explore(player, room_id, reverse_dir('n'))
 
-    # End of the line
-    return
+    # When we can't go North anymore, try West next.
+    print("In room ", room_id, ". Trying West.")
+    if nav_graph[room_id].get('w') == '?':
+        player.travel('w')
+        traversal_path.append('w')
+        explore(player, room_id, reverse_dir('w'))
 
-    # player.travel('n')
-    # traversal_path.append('n')
-    # print("Room id = ", player.current_room.id)
-    # print("Options = ", player.current_room.get_exits())
-    # if 'n' in player.current_room.get_exits():
-    #     print("Yes!")
+    if len(nav_graph) == len(room_graph):
+        return
+
+    # When we can't go West anymore, try South.
+    print("In room ", room_id, ". Trying South.")
+    if nav_graph[room_id].get('s') == '?':
+        player.travel('s')
+        traversal_path.append('s')
+        explore(player, room_id, reverse_dir('s'))
+
+    if len(nav_graph) == len(room_graph):
+        return
+
+    # Finally, try East.
+    print("In room ", room_id, ". Trying East.")
+    if nav_graph[room_id].get('e') == '?':
+        player.travel('e')
+        traversal_path.append('e')
+        explore(player, room_id, reverse_dir('e'))
+
+    if len(nav_graph) == len(room_graph):
+        return
+
+    # All options have been exhausted. Head back...
+    print("Heading back ", from_dir)
+    if from_dir != None:
+        player.travel(from_dir)
+        # Don't forget to record our trip back!
+        # TODO: Only if we haven't found all nodes.
+        traversal_path.append(from_dir)
+
+    return
 
 
 # Fill this out with directions to walk
 # traversal_path = ['n', 'n']
 traversal_path = []
 
+# Auto-play (find all nodes of the maze)
 explore(player)
 
 
